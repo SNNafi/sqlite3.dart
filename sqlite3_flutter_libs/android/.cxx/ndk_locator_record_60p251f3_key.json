@@ -1,0 +1,10 @@
+{
+  "ndkVersionFromDsl": "25.1.8937393",
+  "ndkDirProperty": "/Users/snnafi/Library/Android/sdk/ndk/25.1.8937393",
+  "sdkFolder": "/Users/snnafi/Library/Android/sdk",
+  "sideBySideNdkFolderNames": [
+    "21.4.7075529",
+    "25.1.8937393",
+    "23.1.7779620"
+  ]
+}

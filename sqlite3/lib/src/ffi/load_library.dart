@@ -24,7 +24,7 @@ final OpenDynamicLibrary open = OpenDynamicLibrary._();
 DynamicLibrary _defaultOpen() {
   if (Platform.isAndroid) {
     try {
-      return DynamicLibrary.open('libsqlite3.so');
+      return DynamicLibrary.open('libsqlite3x.so');
       // ignore: avoid_catching_errors
     } on ArgumentError {
       // On some (especially old) Android devices, we somehow can't dlopen
@@ -37,7 +37,7 @@ DynamicLibrary _defaultOpen() {
       final endOfAppId = max(appIdAsBytes.indexOf(0), 0);
       final appId = String.fromCharCodes(appIdAsBytes.sublist(0, endOfAppId));
 
-      return DynamicLibrary.open('/data/data/$appId/lib/libsqlite3.so');
+      return DynamicLibrary.open('/data/data/$appId/lib/libsqlite3x.so');
     }
   } else if (Platform.isLinux) {
     // Recent versions of the `sqlite3_flutter_libs` package bundle sqlite3 with

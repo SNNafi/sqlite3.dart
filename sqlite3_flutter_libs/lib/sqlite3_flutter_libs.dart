@@ -25,13 +25,15 @@ Future<void> applyWorkaroundToOpenSqlite3OnOldAndroidVersions() async {
   if (!Platform.isAndroid) return;
 
   try {
-    DynamicLibrary.open('libsqlite3.so');
+    DynamicLibrary.open('libsqlite3x.so');
+    DynamicLibrary.open("libarabictokenizer.so");
   } on ArgumentError {
     // Ok, the regular approach failed. Try to open sqlite3 in Java, which seems
     // to fix the problem.
     await _platform.invokeMethod('doesnt_matter');
 
     // Try again. If it still fails we're out of luck.
-    DynamicLibrary.open('libsqlite3.so');
+    DynamicLibrary.open('libsqlite3x.so');
+    DynamicLibrary.open("libarabictokenizer.so");
   }
 }

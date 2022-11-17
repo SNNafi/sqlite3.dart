@@ -1,1 +1,2 @@
 rootProject.name = 'sqlite3_flutter_libs'
+include ':libarabic_tokenizer'

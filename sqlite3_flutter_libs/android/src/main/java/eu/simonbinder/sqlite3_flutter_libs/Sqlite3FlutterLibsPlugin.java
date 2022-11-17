@@ -24,7 +24,8 @@ public class Sqlite3FlutterLibsPlugin implements FlutterPlugin {
       @Override
       public void onMethodCall(@NonNull MethodCall call, @NonNull MethodChannel.Result result) {
         try {
-          System.loadLibrary("sqlite3");
+          System.loadLibrary("sqlite3x");
+          System.loadLibrary("arabictokenizer");
           result.success(null);
         } catch (Throwable e) {
           result.error(e.toString(), null, null);
