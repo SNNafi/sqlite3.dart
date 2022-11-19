@@ -22,4 +22,5 @@ Pod::Spec.new do |s|
     s.dependency 'sqlite3/fts5'
     s.dependency 'sqlite3/perf-threadsafe'
     s.dependency 'sqlite3/rtree'
+    s.dependency 'sqlite3_arabic_tokenizer'
 end

@@ -22,8 +22,9 @@ A new flutter plugin project.
   s.dependency 'sqlite3/fts5'
   s.dependency 'sqlite3/perf-threadsafe'
   s.dependency 'sqlite3/rtree'
+  s.dependency 'sqlite3_arabic_tokenizer'
 
-  s.platform = :ios, '8.0'
+  s.platform = :ios, '11.0'
 
   # Flutter.framework does not contain a i386 slice. Only x86_64 simulators are supported.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'VALID_ARCHS[sdk=iphonesimulator*]' => 'x86_64' }
