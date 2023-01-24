@@ -126,7 +126,7 @@ int utf8_decode(const char *str, int *i) {
 
 struct TextInfo *remove_diacritic(const char *text, int debug) {
     if (debug) printf("\nremove_diacritic START %s\n", text);
-    struct TextInfo *info = (struct TextInfo *) sqlite3_malloc(sizeof(struct TextInfo *));
+    struct TextInfo *info = sqlite3_malloc(sizeof(struct TextInfo));
 
     int total = 0;
     for (; text[total] != '\0'; total++);
@@ -187,7 +187,7 @@ struct WordInfo *splitInWordWithLength(const char *text, int length, int debug) 
     totalWords += 1;
     totalChar = length;
 
-    struct WordInfo *info = (struct WordInfo *) sqlite3_malloc(sizeof(struct WordInfo *));
+    struct WordInfo *info = sqlite3_malloc(sizeof(struct WordInfo));
     char **words = sqlite3_malloc(totalWords * sizeof(char *));
     int wordIndex = -1;
     int i = 0;
