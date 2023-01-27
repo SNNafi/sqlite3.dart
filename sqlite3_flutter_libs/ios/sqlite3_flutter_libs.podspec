@@ -22,7 +22,7 @@ A new flutter plugin project.
   s.dependency 'sqlite3/fts5'
   s.dependency 'sqlite3/perf-threadsafe'
   s.dependency 'sqlite3/rtree'
-  s.dependency 'sqlite3_arabic_tokenizer'
+  s.dependency 'sqlite3_arabic_tokenizer', '0.0.2'
 
   s.platform = :ios, '11.0'
 
