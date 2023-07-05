@@ -20,12 +20,15 @@ struct TextInfo {
 struct WordInfo {
     char **words;
     int total;
+    int **actualStartIndexes;
+    int **actualEndIndexes;
 };
 
 
 #define isunicode(c) (((c)&0xc0)==0xc0)
 
-static int arabic_unicode[65] = {
+static int arabic_unicode[66] = {
+        1548, // arabic comma
         1552,
         1553,
         1554,
@@ -83,13 +86,62 @@ static int arabic_unicode[65] = {
         1629,
         1630,
         1631,
-        1648, // 58
+        1648, // 59
 
-        1571, 1573, 1570, 1649, // 62 alif replace
+        1571, 1573, 1570, 1649, // 63 alif replace
         1610,
         1569,
-        1607, // 65
+        1607, // 66
 };
+
+int charsToRemove(const char *c) {
+    return (*c == ' '
+            || *c == '?'
+            || *c == '.'
+            || *c == '#'
+            || *c == '!'
+            || *c == '*'
+            || *c == '%'
+            || *c == '^'
+            || *c == '~'
+            || *c == '`'
+            || *c == '"'
+            || *c == '>'
+            || *c == '<'
+            || *c == ';'
+            || *c == ')'
+            || *c == '('
+            || *c == '+'
+            || *c == '-'
+            || *c == '='
+            || *c == '$'
+            || *c == '/'
+            || *c == '\\'
+            || *c == '|'
+            || *c == ','
+            || *c == ':'
+            || *c == '{'
+            || *c == '}'
+            || *c == '['
+            || *c == ']'
+            || *c == '_'
+
+    );
+}
+
+void removeChars(char *word, int l) {
+    int i, j;
+    int len = l;
+    for (i = 0; i < len; i++) {
+        if (charsToRemove(&word[i])) {
+            for (j = i; j < len; j++) {
+                word[j] = word[j + 1];
+            }
+            len--;
+            i--;
+        }
+    }
+}
 
 char *aliff = "ا";
 char *r1 = "ى";
@@ -98,8 +150,8 @@ char *r3 = "ة";
 
 int unicode_diacritic(int code) {
 
-    int found = 0;
-    for (int i = 0; i < 64; i++) {
+    int found = -1;
+    for (int i = 0; i < 66; i++) {
         if (arabic_unicode[i] == code) {
             found = i;
             break;
@@ -127,7 +179,7 @@ int utf8_decode(const char *str, int *i) {
 
 struct TextInfo *remove_diacritic(const char *text, int debug) {
     if (debug) printf("\nremove_diacritic START %s\n", text);
-    struct TextInfo *info = (struct TextInfo *) sqlite3_malloc(sizeof(struct TextInfo *));
+    struct TextInfo *info = (struct TextInfo *) sqlite3_malloc(sizeof(struct TextInfo));
 
     int total = 0;
     for (; text[total] != '\0'; total++);
@@ -145,20 +197,20 @@ struct TextInfo *remove_diacritic(const char *text, int debug) {
             int z = utf8_decode(&text[i], &l);
             i += l;
             int index = unicode_diacritic(z);
-            if (index == 0) {
+            if (index == -1) {
                 *(replaced + j++) = text[i - 2];
                 *(replaced + j++) = text[i - 1];
-            } else if (index >= 58 && index <= 61) {
+            } else if (index >= 59 && index <= 62) {
                 *(replaced + j++) = aliff[0];
                 *(replaced + j++) = aliff[1];
-            } else if (index >= 62 && index <= 64) {
-                if (index == 62) {
+            } else if (index >= 63 && index <= 65) {
+                if (index == 63) {
                     *(replaced + j++) = r1[0];
                     *(replaced + j++) = r1[1];
-                } else if (index == 63) {
+                } else if (index == 64) {
                     *(replaced + j++) = r2[0];
                     *(replaced + j++) = r2[1];
-                } else if (index == 64) {
+                } else if (index == 65) {
                     *(replaced + j++) = r3[0];
                     *(replaced + j++) = r3[1];
                 }
@@ -188,20 +240,32 @@ struct WordInfo *splitInWordWithLength(const char *text, int length, int debug) 
     totalWords += 1;
     totalChar = length;
 
-    struct WordInfo *info = (struct WordInfo *) sqlite3_malloc(sizeof(struct WordInfo *));
+    struct WordInfo *info = (struct WordInfo *) sqlite3_malloc(sizeof(struct WordInfo));
     char **words = sqlite3_malloc(totalWords * sizeof(char *));
+    int **actualStartIndexes = sqlite3_malloc(totalWords * sizeof(int *));
+    int **actualEndIndexes = sqlite3_malloc(totalWords * sizeof(int *));
     int wordIndex = -1;
     int i = 0;
     int j = -1;
+    int *startIndex = (int *) sqlite3_malloc(sizeof(int));
+    int *endIndex = (int *) sqlite3_malloc(sizeof(int));
     char *word = (char *) sqlite3_malloc(totalChar + 5);
+    *startIndex = i;
     for (; i < totalChar; i++) {
         if (debug) printf("\n%c\n", text[i]);
         if (text[i] == ' ') {
             if (j >= 0) {
                 word[++j] = '\0';
+                removeChars(word, j);
                 words[++wordIndex] = word;
+                *endIndex = i; // i > 0 ? i - 1 : i;
+                actualStartIndexes[wordIndex] = startIndex;
+                actualEndIndexes[wordIndex] = endIndex;
                 j = -1;
                 word = (char *) sqlite3_malloc(totalChar + 5);
+                startIndex = (int *) sqlite3_malloc(sizeof(int));
+                endIndex = (int *) sqlite3_malloc(sizeof(int));
+                *startIndex = i; // i + 1;
             }
         } else {
             word[++j] = text[i];
@@ -212,10 +276,15 @@ struct WordInfo *splitInWordWithLength(const char *text, int length, int debug) 
     if (j >= 0) {
         word[++j] = '\0';
         words[++wordIndex] = word;
+        *endIndex = i; // i > 0 ? i - 1 : i;
+        actualStartIndexes[wordIndex] = startIndex;
+        actualEndIndexes[wordIndex] = endIndex;
     }
 
     info->words = words;
     info->total = wordIndex + 1;
+    info->actualStartIndexes = actualStartIndexes;
+    info->actualEndIndexes = actualEndIndexes;
     return info;
 }
 
@@ -269,13 +338,17 @@ static int fts5ArabicTokenizerTokenize(
     struct WordInfo *wInfo = splitInWordWithLength(pText, nText, 0);
     for (int i = 0; i < wInfo->total; i++) {
         struct TextInfo *info = remove_diacritic(wInfo->words[i], 0);
-        int rc = xToken(pCtx, 0, info->modifiedText, info->length, 0,
-                        nText);
+        int rc = xToken(pCtx, 0, info->modifiedText, info->length, *wInfo->actualStartIndexes[i],
+                        *wInfo->actualEndIndexes[i]);
         sqlite3_free(wInfo->words[i]);
+        sqlite3_free(wInfo->actualStartIndexes[i]);
+        sqlite3_free(wInfo->actualEndIndexes[i]);
         if (rc) return rc;
     }
 
     sqlite3_free(wInfo->words);
+    sqlite3_free(wInfo->actualStartIndexes);
+    sqlite3_free(wInfo->actualEndIndexes);
     sqlite3_free(wInfo);
 
     return SQLITE_OK;

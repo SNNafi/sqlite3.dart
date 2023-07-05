@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <string.h>
-#include <sqlite3ext.h>
+#include "sqlite3ext.h"
 #include <assert.h>
 
 SQLITE_EXTENSION_INIT1;
@@ -19,6 +19,8 @@ struct TextInfo {
 struct WordInfo {
     char **words;
     int total;
+    int **actualStartIndexes;
+    int **actualEndIndexes;
 };
 
 
@@ -176,7 +178,7 @@ int utf8_decode(const char *str, int *i) {
 
 struct TextInfo *remove_diacritic(const char *text, int debug) {
     if (debug) printf("\nremove_diacritic START %s\n", text);
-    struct TextInfo *info = sqlite3_malloc(sizeof(struct TextInfo));
+    struct TextInfo *info = (struct TextInfo *) sqlite3_malloc(sizeof(struct TextInfo));
 
     int total = 0;
     for (; text[total] != '\0'; total++);
@@ -237,12 +239,17 @@ struct WordInfo *splitInWordWithLength(const char *text, int length, int debug) 
     totalWords += 1;
     totalChar = length;
 
-    struct WordInfo *info = sqlite3_malloc(sizeof(struct WordInfo));
+    struct WordInfo *info = (struct WordInfo *) sqlite3_malloc(sizeof(struct WordInfo));
     char **words = sqlite3_malloc(totalWords * sizeof(char *));
+    int **actualStartIndexes = sqlite3_malloc(totalWords * sizeof(int *));
+    int **actualEndIndexes = sqlite3_malloc(totalWords * sizeof(int *));
     int wordIndex = -1;
     int i = 0;
     int j = -1;
+    int *startIndex = (int *) sqlite3_malloc(sizeof(int));
+    int *endIndex = (int *) sqlite3_malloc(sizeof(int));
     char *word = (char *) sqlite3_malloc(totalChar + 5);
+    *startIndex = i;
     for (; i < totalChar; i++) {
         if (debug) printf("\n%c\n", text[i]);
         if (text[i] == ' ') {
@@ -250,8 +257,14 @@ struct WordInfo *splitInWordWithLength(const char *text, int length, int debug) 
                 word[++j] = '\0';
                 removeChars(word, j);
                 words[++wordIndex] = word;
+                *endIndex = i; // i > 0 ? i - 1 : i;
+                actualStartIndexes[wordIndex] = startIndex;
+                actualEndIndexes[wordIndex] = endIndex;
                 j = -1;
                 word = (char *) sqlite3_malloc(totalChar + 5);
+                startIndex = (int *) sqlite3_malloc(sizeof(int));
+                endIndex = (int *) sqlite3_malloc(sizeof(int));
+                *startIndex = i; // i + 1;
             }
         } else {
             word[++j] = text[i];
@@ -262,10 +275,15 @@ struct WordInfo *splitInWordWithLength(const char *text, int length, int debug) 
     if (j >= 0) {
         word[++j] = '\0';
         words[++wordIndex] = word;
+        *endIndex = i; // i > 0 ? i - 1 : i;
+        actualStartIndexes[wordIndex] = startIndex;
+        actualEndIndexes[wordIndex] = endIndex;
     }
 
     info->words = words;
     info->total = wordIndex + 1;
+    info->actualStartIndexes = actualStartIndexes;
+    info->actualEndIndexes = actualEndIndexes;
     return info;
 }
 
@@ -319,13 +337,17 @@ static int fts5ArabicTokenizerTokenize(
     struct WordInfo *wInfo = splitInWordWithLength(pText, nText, 0);
     for (int i = 0; i < wInfo->total; i++) {
         struct TextInfo *info = remove_diacritic(wInfo->words[i], 0);
-        int rc = xToken(pCtx, 0, info->modifiedText, info->length, 0,
-                        nText);
+        int rc = xToken(pCtx, 0, info->modifiedText, info->length, *wInfo->actualStartIndexes[i],
+                        *wInfo->actualEndIndexes[i]);
         sqlite3_free(wInfo->words[i]);
+        sqlite3_free(wInfo->actualStartIndexes[i]);
+        sqlite3_free(wInfo->actualEndIndexes[i]);
         if (rc) return rc;
     }
 
     sqlite3_free(wInfo->words);
+    sqlite3_free(wInfo->actualStartIndexes);
+    sqlite3_free(wInfo->actualEndIndexes);
     sqlite3_free(wInfo);
 
     return SQLITE_OK;
