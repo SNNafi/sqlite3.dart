@@ -22,6 +22,7 @@ rootProject.allprojects {
 apply plugin: 'com.android.library'
 
 android {
+    namespace "com.example.sqlite3_flutter_libs"
     compileSdkVersion 28
 
     defaultConfig {
